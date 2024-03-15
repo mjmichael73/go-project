@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"github.com/stretchr/gomniauth"
+	"github.com/stretchr/gomniauth/providers/google"
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"sync"
-	"go-project/trace"
 )
 
 type templateHandler struct {
@@ -31,9 +31,15 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 	var addr = flag.String("addr", ":8080", "The addr of the application.")
 	flag.Parse()
+	gomniauth.SetSecurityKey("abcdefghijklmnopqrstuvwxyz")
+	gomniauth.WithProviders(
+		google.New("708077468376-27erjfilu5g33p2mdnkncg77jn33uae3.apps.googleusercontent.com", "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", "http://localhost:8080/auth/callback/google"),
+	)
 	r := newRoom()
 	//r.tracer = trace.New(os.Stdout)
-	http.Handle("/", &templateHandler{filename: "chat.html"})
+	http.Handle("/chat", MustAuth(&templateHandler{filename: "chat.html"}))
+	http.Handle("/login", &templateHandler{filename: "login.html"})
+	http.HandleFunc("/auth/", loginHandler)
 	http.Handle("/room", r)
 	go r.run()
 	log.Println("Starting web server on", *addr)
